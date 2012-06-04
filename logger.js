@@ -28,15 +28,12 @@ myWinston.setLevels(winston.config.syslog.levels);
 
 function newLogger(config) {
 
-    var level =  config.level === undefined? defaultLevel: config.level;
-    var filename = config.filename === undefined? defaultFilename: config.filename;
-
     var regxexp = /(\s+)/gm;
     var logger = {};
     logger.log = function (loglevel, msg, obj) {
 
 
-        if (myWinston.levels[loglevel] < myWinston.levels[level]) {
+        if (myWinston.levels[loglevel] < myWinston.levels[config.level]) {
             return;
         }
 

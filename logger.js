@@ -26,7 +26,7 @@ var myWinston = new (winston.Logger)({
 
 myWinston.setLevels(winston.config.syslog.levels);
 
-function newLogger(config) {
+function newLogger() {
 
     var regxexp = /(\s+)/gm;
     var logger = {};

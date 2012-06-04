@@ -10,26 +10,37 @@
 var util = require('util');
 var winston = require('winston');
 
+var config;
+try {
+    config = require('config_base').logger;
+}
+catch (e) {
+    console.log(e);
+    config = {
+        level:'debug',
+        filename:'somefile.log'
+    };
+}
 // Depth level for object inspection
 var depth = 4;
 
 var myWinston = new (winston.Logger)({
-    level: 'debug',
+    level:config.level,
     transports:[
-        new (winston.transports.Console)({ level:'debug', timestamp:true}),
-        new (winston.transports.File)({ level:'debug', filename:'somefile.log', timestamp:true, json:false})
+        new (winston.transports.Console)({ level:config.level, timestamp:true}),
+        new (winston.transports.File)({ level:config.level, filename:config.filename, timestamp:true, json:false})
     ]
 });
 
 myWinston.setLevels(winston.config.syslog.levels);
 
 function newLogger() {
-    var regxexp =  /(\s+)/gm;
+    var regxexp = /(\s+)/gm;
     var logger = {};
     logger.log = function (loglevel, msg, obj) {
 
 
-        if( myWinston.levels[loglevel] < myWinston.levels[myWinston.level] ){
+        if (myWinston.levels[loglevel] < myWinston.levels[myWinston.level]) {
             return;
         }
 
@@ -37,8 +48,8 @@ function newLogger() {
             var prefix = this.prefix === undefined ? '[?]' : '[' + this.prefix + '] ';
             //msg += ' ' + JSON.stringify(cutback(4, obj));
 
-            msg  += ' ' +util.inspect(obj, true, depth).replace(regxexp,' ');
-            return myWinston.log(loglevel, prefix+ msg);
+            msg += ' ' + util.inspect(obj, true, depth).replace(regxexp, ' ');
+            return myWinston.log(loglevel, prefix + msg);
         }
         catch (e) {
             console.log(e);

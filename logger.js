@@ -7,8 +7,11 @@
 // Simple substitute for a real logging
 //
 
-var util = require('util')
-var winston = require('winston')
+var util = require('util');
+var winston = require('winston');
+
+// Depth level for object inspection
+var depth = 4;
 
 var myWinston = new (winston.Logger)({
     level: 'debug',
@@ -33,7 +36,8 @@ function newLogger() {
         try {
             var prefix = this.prefix === undefined ? '[?]' : '[' + this.prefix + '] ';
             //msg += ' ' + JSON.stringify(cutback(4, obj));
-            msg  += ' ' +util.inspect(obj, true, 4).replace(regxexp,' ');
+
+            msg  += ' ' +util.inspect(obj, true, depth).replace(regxexp,' ');
             return myWinston.log(loglevel, prefix+ msg);
         }
         catch (e) {

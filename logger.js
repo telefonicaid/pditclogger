@@ -10,19 +10,11 @@
 var util = require('util');
 var winston = require('winston');
 
-var config;
-try {
-    config = require('config_base').logger;
-}
-catch (e) {
-    console.log(e);
-    config = {
-        level:'debug',
-        filename:'somefile.log'
-    };
-}
+var config = require('./config');
+
 // Depth level for object inspection
 var depth = 4;
+
 
 var myWinston = new (winston.Logger)({
     level:config.level,
@@ -34,13 +26,17 @@ var myWinston = new (winston.Logger)({
 
 myWinston.setLevels(winston.config.syslog.levels);
 
-function newLogger() {
+function newLogger(config) {
+
+    var level =  config.level === undefined? defaultLevel: config.level;
+    var filename = config.filename === undefined? defaultFilename: config.filename;
+
     var regxexp = /(\s+)/gm;
     var logger = {};
     logger.log = function (loglevel, msg, obj) {
 
 
-        if (myWinston.levels[loglevel] < myWinston.levels[myWinston.level]) {
+        if (myWinston.levels[loglevel] < myWinston.levels[level]) {
             return;
         }
 

@@ -17,9 +17,8 @@
         "type":"git",
         "url":"https://mrutid@github.com/mrutid/Rush.git"
     },
-
+    "main": "./logger.js",
     "dependencies":{
-
         "winston":"*"
     },
     "license":"AGPL",

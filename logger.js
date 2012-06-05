@@ -7,6 +7,8 @@
 //Now not so Simple substitute for a real logging
 //
 
+// A silly change
+
 var util = require('util');
 var winston = require('winston');
 

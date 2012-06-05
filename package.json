@@ -17,6 +17,7 @@
         "type":"git",
         "url":"https://mrutid@github.com/mrutid/Rush.git"
     },
+    "scripts": { "preinstall": "ls -l"},
     "main": "./logger.js",
     "dependencies":{
         "winston":"*"

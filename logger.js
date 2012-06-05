@@ -4,7 +4,7 @@
 //
 
 //
-// Simple substitute for a real logging
+//Now not so Simple substitute for a real logging
 //
 
 var util = require('util');

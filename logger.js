@@ -15,14 +15,14 @@ var winston = require('winston');
 var config = require('./config');
 
 // Depth level for object inspection
-var depth = 4;
-
+var depth = config.inspectDepth;
+var logLevel = config.level;
 
 var myWinston = new (winston.Logger)({
-    level:config.level,
+    level:logLevel,
     transports:[
-        new (winston.transports.Console)({ level:config.level, timestamp:true}),
-        new (winston.transports.File)({ level:config.level, filename:config.filename, timestamp:true, json:false})
+        new (winston.transports.Console)({ level:logLevel, timestamp:true}),
+        new (winston.transports.File)({ level:logLevel, filename:config.filename, timestamp:true, json:false})
     ]
 });
 
@@ -32,31 +32,32 @@ function newLogger() {
 
     var regxexp = /(\s+)/gm;
     var logger = {};
-    logger.log = function (loglevel, msg, obj) {
-
-
-        if (myWinston.levels[loglevel] < myWinston.levels[config.level]) {
+    logger.log = function (level, msg, obj) {
+        if (myWinston.levels[level] < myWinston.levels[logLevel]) {
             return;
         }
 
         try {
             var prefix = this.prefix === undefined ? '[?]' : '[' + this.prefix + '] ';
-            //msg += ' ' + JSON.stringify(cutback(4, obj));
 
-            msg += ' ' + util.inspect(obj, true, depth).replace(regxexp, ' ');
-            return myWinston.log(loglevel, prefix + msg);
+            if (obj !== null && obj !== undefined) {
+                msg += ' ' + util.inspect(obj, true, depth).replace(regxexp, ' ');
+            }
+            return myWinston.log(level, prefix + msg);
         }
         catch (e) {
             console.log(e);
         }
-    }
+    };
 
-    for (var level in winston.config.syslog.levels) {
-        logger[level] = function (level) {
-            return function (msg, obj) {
-                return this.log(level, msg, obj);
-            }
-        }(level);
+    for (var lvl in winston.config.syslog.levels) {
+        if (winston.config.syslog.levels.hasOwnProperty(lvl)) {
+            logger[lvl] = function _block(aLevel) {
+                return function (msg, obj) {
+                    return this.log(aLevel, msg, obj);
+                }
+            }(lvl);    
+        }     
     }
 
     return logger;

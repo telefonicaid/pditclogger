@@ -5,5 +5,6 @@
  * Time: 18:40
  * To change this template use File | Settings | File Templates.
  */
-exports.level = 'debug'
-exports.filename = 'pditclogger.log'
+exports.level = 'debug';
+exports.filename = 'pditclogger.log';
+exports.inspectDepth = 4;

@@ -59,6 +59,10 @@ function newLogger() {
             }(lvl);    
         }     
     }
+    
+    logger.setLevel = function (lvl) {
+        logLevel = lvl;
+    }
 
     return logger;
 }

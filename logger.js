@@ -3,37 +3,52 @@
 //
 //
 
-//
-//Now not so Simple substitute for a real logging
-//
-
-// A silly change
-
 var util = require('util');
 var winston = require('winston');
+var logger = null;
 
-var config = require('./config');
+var myWinston = null;
+var config = {
+    logLevel:'debug',
+    inspectDepth:2,
+    Console:{
+        level:'debug', timestamp:true
+    },
+    File:{
+        level:'debug', filename:'pditclogger.log', timestamp:true, json:false
+    }
+};
 
-// Depth level for object inspection
-var depth = config.inspectDepth;
-var logLevel = config.level;
+function setConfig(newCfg) {
+    "use strict";
 
-var myWinston = new (winston.Logger)({
-    level:logLevel,
-    transports:[
-        new (winston.transports.Console)({ level:logLevel, timestamp:true}),
-        new (winston.transports.File)({ level:logLevel, filename:config.filename, timestamp:true, json:false})
-    ]
-});
+    config = newCfg;
+    createWinston(config);
+}
 
-myWinston.setLevels(winston.config.syslog.levels);
+function createWinston(cfg) {
+    "use strict";
+    myWinston = new (winston.Logger)({
+        level:cfg.logLevel,
+        transports:[
+            new (winston.transports.Console)(cfg.Console),
+            new (winston.transports.File)(cfg.File)
+        ]
+    });
+
+    myWinston.setLevels(winston.config.syslog.levels);
+}
+
 
 function newLogger() {
+    "use strict";
 
-    var regxexp = /(\s+)/gm;
+    if (myWinston === null) {
+        createWinston(config);
+    }
     var logger = {};
     logger.log = function (level, msg, obj) {
-        if (myWinston.levels[level] < myWinston.levels[logLevel]) {
+        if (myWinston.levels[level] < myWinston.levels[config.logLevel]) {
             return;
         }
 
@@ -41,7 +56,14 @@ function newLogger() {
             var prefix = this.prefix === undefined ? '[?]' : '[' + this.prefix + '] ';
 
             if (obj !== null && obj !== undefined) {
-                msg += ' ' + util.inspect(obj, true, depth).replace(regxexp, ' ');
+                if (util.isArray(obj)) {
+                    for (var ix = 0; ix < obj.length; ix++) {
+                        msg += ' ' + util.inspect(obj[ix]);
+                    }
+                }
+                else {
+                    msg += ' ' + util.inspect(obj);
+                }
             }
             return myWinston.log(level, prefix + msg);
         }
@@ -50,26 +72,28 @@ function newLogger() {
         }
     };
 
+
     for (var lvl in winston.config.syslog.levels) {
         if (winston.config.syslog.levels.hasOwnProperty(lvl)) {
             logger[lvl] = function _block(aLevel) {
                 return function (msg, obj) {
-                    return this.log(aLevel, msg, obj);
-                }
-            }(lvl);    
-        }     
+                    return logger.log(aLevel, msg, obj);
+                };
+            }(lvl);
+        }
     }
-    
-    logger.setLevel = function (lvl) {
-        logLevel = lvl;
-    }
+
+    /*
+     TODO: A log level for every logger? Each module could set its own filtering level
+     logger.setLevel = function ...
+     */
 
     return logger;
 }
 
 
 exports.newLogger = newLogger;
-
+exports.setConfig = setConfig;
 /*
  debug: 0,
  info: 1,
@@ -113,4 +137,3 @@ exports.newLogger = newLogger;
 
 
  */
-

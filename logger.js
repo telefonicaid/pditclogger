@@ -58,11 +58,11 @@ function newLogger() {
             if (obj !== null && obj !== undefined) {
                 if (util.isArray(obj)) {
                     for (var ix = 0; ix < obj.length; ix++) {
-                        msg += ' ' + util.inspect(obj[ix]);
+                        msg += ' ' + util.inspect(obj[ix], false, config.inspectDepth);
                     }
                 }
                 else {
-                    msg += ' ' + util.inspect(obj);
+                    msg += ' ' + util.inspect(obj, false, config.inspectDepth);
                 }
             }
             return myWinston.log(level, prefix + msg);

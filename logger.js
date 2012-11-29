@@ -65,7 +65,7 @@ function newLogger() {
                     msg += ' ' + util.inspect(obj, false, config.inspectDepth);
                 }
             }
-            return myWinston.log(level, prefix + msg);
+            return myWinston.log(level, prefix + msg.replace(/\n/g,""));
         }
         catch (e) {
             console.log(e);

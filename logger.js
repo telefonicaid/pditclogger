@@ -58,8 +58,11 @@ function newLogger() {
             if (obj !== null && obj !== undefined) {
                 if (util.isArray(obj)) {
                     msg +=" [ ";
-                    for (var ix = 0; ix < obj.length; ix++) {
-                        msg += ' ' + util.inspect(obj[ix], false, config.inspectDepth);
+                    if(obj.length>0) {
+                        msg += util.inspect(obj[0], false, config.inspectDepth); 
+                    }
+                    for (var ix = 1; ix < obj.length; ix++) {
+                        msg += ', ' + util.inspect(obj[ix], false, config.inspectDepth);
                     }
                     msg +=" ] ";
 

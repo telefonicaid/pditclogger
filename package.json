@@ -20,7 +20,7 @@
 
     "main": "./logger.js",
     "dependencies":{
-        "winston":"*"
+        "winston":"0.6.2"
     },
     "license":"AGPL",
     "engine":{

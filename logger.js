@@ -88,7 +88,9 @@ function newLogger() {
             }(lvl);
         }
     }
-
+    // socket.io compatibility 
+    logger.warn = logger.warning;
+    
     /*
      TODO: A log level for every logger? Each module could set its own filtering level
      logger.setLevel = function ...

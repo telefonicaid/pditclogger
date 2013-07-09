@@ -1,29 +1,30 @@
 {
-    "name":"PDITCLogger",
-    "version":"0.0.1",
-    "author":"Transversal Development",
-    "description":"a simple logging wrapper",
-    "contributors":[
-        {
-            "name":"Carlos Romero Brox",
-            "email":"brox@tid.es"
-        },
-        {
-            "name":"Marcos Reyes",
-            "email":"mru@tid.es"
-        }
-    ],
-    "repository":{
-        "type":"git",
-        "url":"https://github.com/telefonicaid/pditclogger.git"
+  "name": "PDITCLogger",
+  "version": "0.0.1",
+  "author": "Transversal Development",
+  "description": "a simple logging wrapper",
+  "contributors": [
+    {
+      "name": "Carlos Romero Brox",
+      "email": "brox@tid.es"
     },
-
-    "main": "./logger.js",
-    "dependencies":{
-        "winston":"0.6.2"
-    },
-    "license":"AGPL",
-    "engine":{
-        "node":"0.6.6"
+    {
+      "name": "Marcos Reyes",
+      "email": "mru@tid.es"
     }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/telefonicaid/pditclogger.git"
+  },
+
+  "main": "./logger.js",
+  "dependencies": {
+    "winston": "0.6.2",
+    "cycle": "1.0.x"
+  },
+  "license": "AGPL",
+  "engine": {
+    "node": "0.6.6"
+  }
 }

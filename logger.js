@@ -4,99 +4,119 @@
 //
 
 var util = require('util');
+var common = require('./personalizedCommon.js')
 var winston = require('winston');
+var os = require('os');
 var logger = null;
 
+var hostname = os.hostname();
 var myWinston = null;
 var config = {
-    logLevel:'debug',
-    inspectDepth:2,
-    Console:{
-        level:'debug', timestamp:true
-    },
-    File:{
-        level:'debug', filename:'pditclogger.log', timestamp:true, json:false
-    }
+  logLevel: 'debug',
+  inspectDepth: 2,
+  Console: {
+    level: 'debug', timestamp: true
+  },
+  File: {
+    level: 'debug', filename: 'pditclogger.log', timestamp: true, json: false
+  }
 };
 
 function setConfig(newCfg) {
-    "use strict";
+  "use strict";
 
-    config = newCfg;
-    createWinston(config);
+  config = newCfg;
+  createWinston(config);
 }
 
 function createWinston(cfg) {
-    "use strict";
-    myWinston = new (winston.Logger)({
-        level:cfg.logLevel,
-        transports:[
-            new (winston.transports.Console)(cfg.Console),
-            new (winston.transports.File)(cfg.File)
-        ]
-    });
+  "use strict";
+  myWinston = new (winston.Logger)({
+    level: cfg.logLevel,
+    transports: [
+      new (winston.transports.Console)(cfg.Console),
+      new (winston.transports.File)(cfg.File)
+    ]
+  });
 
-    myWinston.setLevels(winston.config.syslog.levels);
+  myWinston.setLevels(winston.config.syslog.levels);
 }
 
 
 function newLogger() {
-    "use strict";
+  "use strict";
 
-    if (myWinston === null) {
-        createWinston(config);
+  if (myWinston === null) {
+    createWinston(config);
+  }
+  var logger = {};
+  logger.log = function (level, logObj, obj) {
+    if (myWinston.levels[level] < myWinston.levels[config.logLevel]) {
+      return;
     }
-    var logger = {};
-    logger.log = function (level, msg, obj) {
-        if (myWinston.levels[level] < myWinston.levels[config.logLevel]) {
-            return;
+
+    try {
+
+      //Compatibility with older versions
+      if (typeof logObj === 'string') {
+        logObj = { msg: logObj };
+      }
+
+      var msg = '';
+
+      //PDI Format
+      msg += os.hostname() + ' | ';                                                             //Machine
+      msg += (logObj.component ? logObj.component : (this.prefix ? this.prefix : '?')) + ' | '; //Component
+      msg += level.toUpperCase() + ' | ';                                                       //Log level
+      msg += (logObj.traceID ? logObj.traceID : 'N/A') + ' | ';                                 //Trace ID
+      msg += (logObj.userID ? logObj.userID : 'SYSTEM') + ' | ';                                //User ID
+      msg += (logObj.opType ? logObj.opType : 'DEFAULT') + ' | ';                               //Op Type
+      msg += (logObj.msg ? logObj.msg : '');                                                    //User message
+
+      if (obj !== null && obj !== undefined) {
+
+        msg += ' ';
+
+        if (util.isArray(obj)) {
+          if (obj.length > 0) {
+            msg += util.inspect(obj[0], false, config.inspectDepth);
+          }
+          for (var ix = 1; ix < obj.length; ix++) {
+            msg += ', ' + util.inspect(obj[ix], false, config.inspectDepth);
+          }
+
         }
-
-        try {
-            var prefix = this.prefix === undefined ? '[?]' : '[' + this.prefix + '] ';
-
-            if (obj !== null && obj !== undefined) {
-                if (util.isArray(obj)) {
-                    msg +=" [ ";
-                    if(obj.length>0) {
-                        msg += util.inspect(obj[0], false, config.inspectDepth); 
-                    }
-                    for (var ix = 1; ix < obj.length; ix++) {
-                        msg += ', ' + util.inspect(obj[ix], false, config.inspectDepth);
-                    }
-                    msg +=" ] ";
-
-                }
-                else {
-                    msg += ' ' + util.inspect(obj, false, config.inspectDepth);
-                }
-            }
-            return myWinston.log(level, prefix + msg.replace(/\n/g,""));
+        else {
+          msg += util.inspect(obj, false, config.inspectDepth);
         }
-        catch (e) {
-            console.log(e);
-        }
-    };
-
-
-    for (var lvl in winston.config.syslog.levels) {
-        if (winston.config.syslog.levels.hasOwnProperty(lvl)) {
-            logger[lvl] = function _block(aLevel) {
-                return function (msg, obj) {
-                    return logger.log(aLevel, msg, obj);
-                };
-            }(lvl);
-        }
+      }
+      return myWinston.log(level, msg.replace(/\n/g, ''));
+      //console.log(prefix + msg);
     }
-    // socket.io compatibility 
-    logger.warn = logger.warning;
-    
-    /*
-     TODO: A log level for every logger? Each module could set its own filtering level
-     logger.setLevel = function ...
-     */
+    catch (e) {
+      console.log(e);
+    }
+  };
 
-    return logger;
+
+  for (var lvl in winston.config.syslog.levels) {
+    if (winston.config.syslog.levels.hasOwnProperty(lvl)) {
+      logger[lvl] = function _block(aLevel) {
+        return function (msg, obj) {
+          return logger.log(aLevel, msg, obj);
+        };
+      }(lvl);
+    }
+  }
+  // socket.io compatibility
+  logger.warn = logger.warning;
+
+  /*
+   TODO: A log level for every logger? Each module could set its own filtering level
+   logger.setLevel = function ...
+   */
+
+  return logger;
 }
 
 

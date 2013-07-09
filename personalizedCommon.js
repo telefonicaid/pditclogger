@@ -69,7 +69,7 @@ common.log = function (options) {
 
   //output = timestamp ? timestamp + ' | ' : '';
   //output += options.colorize ? config.colorize(options.level) : options.level;
-  output += options.message;
+  output = options.message;
 
   if (meta) {
     if (typeof meta !== 'object') {

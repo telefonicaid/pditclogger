@@ -67,7 +67,7 @@ common.log = function (options) {
     });
   }
 
-  output = timestamp ? timestamp + ' | ' : '';
+  //output = timestamp ? timestamp + ' | ' : '';
   //output += options.colorize ? config.colorize(options.level) : options.level;
   output += options.message;
 

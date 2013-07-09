@@ -3,8 +3,14 @@
 //
 //
 
+/*
+ * Since Winston has a predefined log style define in 'common' module, it's necessary to modify this module
+ * in order to accomplish TID Log Style guide. 'personalizedCommon.js' modifies that module and it's necessary
+ * to be required even if not used.
+ */
+
 var util = require('util');
-var common = require('./personalizedCommon.js')
+var common = require('./personalizedCommon.js');
 var winston = require('winston');
 var os = require('os');
 var logger = null;

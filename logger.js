@@ -17,6 +17,7 @@ var logger = null;
 
 var hostname = os.hostname();
 var myWinston = null;
+
 var config = {
   logLevel: 'debug',
   inspectDepth: 2,
@@ -24,6 +25,7 @@ var config = {
     level: 'debug', timestamp: true
   },
   File: {
+    //FIXME: Filename should be changed to meet PID requirements
     level: 'debug', filename: 'pditclogger.log', timestamp: true, json: false
   }
 };
@@ -31,11 +33,11 @@ var config = {
 function timestamp() {
 
   function pad(number) {
-    var r = String(number);
-    if ( r.length === 1 ) {
-      r = '0' + r;
+    var stringValue = String(number);
+    if ( stringValue.length === 1 ) {
+      stringValue = '0' + stringValue;
     }
-    return r;
+    return stringValue;
   }
 
   var date = new Date();
@@ -75,7 +77,17 @@ function newLogger() {
   if (myWinston === null) {
     createWinston(config);
   }
+
   var logger = {};
+
+  /**
+   *
+   * @param level Standard default values (DEBUG, INFO, NOTICE, WARNING, ERROR, CRIT, ALERT, EMERG)
+   * @param logObj An object with the following fileds: component, traceID, userID, opType and msg. If any of
+   * those fields are not included, default values will be used.
+   * @param obj An object or an array that will be printed after the message
+   * @returns {*}
+   */
   logger.log = function (level, logObj, obj) {
     if (myWinston.levels[level] < myWinston.levels[config.logLevel]) {
       return;

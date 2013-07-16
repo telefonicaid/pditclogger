@@ -16,7 +16,7 @@
 var util = require('util'),
     cycle = require('cycle');
 
-var config = require('./node_modules/winston/lib/winston/config');
+var config = require('./node_modules/winston/lib/winston/config.js');
 var common = require('./node_modules/winston/lib/winston/common.js');
 
 common.log = function (options) {
@@ -76,7 +76,8 @@ common.log = function (options) {
       output += ' ' + meta;
     }
     else if (Object.keys(meta).length > 0) {
-      output += ' ' + (options.prettyPrint ? ('\n' + util.inspect(meta, false, null, options.colorize)) : common.serialize(meta));
+      output += ' ' + (options.prettyPrint ? ('\n' + util.inspect(meta, false, null, options.colorize)) :
+          common.serialize(meta));
     }
   }
 

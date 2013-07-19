@@ -93,6 +93,11 @@ function createWinston(cfg) {
 
   criticalWinston.setLevels(winston.config.syslog.levels);
 
+  //Necessary because some messages are not flushed correctly
+  criticalWinston.transports.file.once('open', function(e){
+    criticalWinston.transports.file.flush();
+  });
+
   //NORMAL WINSTON
   //Used for normal logging purposes
 
@@ -157,11 +162,7 @@ function newLogger() {
       return;
     }
 
-    var message = createLogMessage(level, logObj, obj).replace(/\n/g, '');
-
-    if (normalWinston.levels[level] >= normalWinston.levels['crit']) {
-      criticalWinston.log(level, message)
-    }
+    var message = createLogMessage.call(this, level, logObj, obj).replace(/\n/g, '');
 
     return normalWinston.log(level, message);
   };

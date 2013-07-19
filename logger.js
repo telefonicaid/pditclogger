@@ -16,7 +16,8 @@ var os = require('os');
 var logger = null;
 
 var hostname = os.hostname();
-var myWinston = null;
+var normalWinston = null;
+var criticalWinston = null;
 
 var config = {
   logLevel: 'debug',
@@ -30,51 +31,113 @@ var config = {
   }
 };
 
-function timestamp() {
+function createLogMessage(level, logObj, obj) {
 
-  function pad(number) {
-    var stringValue = String(number);
-    if ( stringValue.length === 1 ) {
-      stringValue = '0' + stringValue;
-    }
-    return stringValue;
+  //Compatibility with older versions
+  if (typeof logObj === 'string') {
+    logObj = { msg: logObj };
   }
 
-  var date = new Date();
-  return date.getUTCFullYear()
-      + '-' + pad( date.getUTCMonth() + 1 )
-      + '-' + pad( date.getUTCDate() )
-      + ' ' + pad( date.getUTCHours() )
-      + ':' + pad( date.getUTCMinutes() )
-      + ':' + pad( date.getUTCSeconds() )
-      + '.' + String( (date.getUTCMilliseconds()/1000).toFixed(3) ).slice( 2, 5 )
-      + 'Z';
-}
+  var msg = '';
 
-function setConfig(newCfg) {
-  "use strict";
+  //PDI Format
+  msg += os.hostname() + ' | ';                                                             //Machine
+  msg += (logObj.component ? logObj.component : (this.prefix ? this.prefix : '?')) + ' | '; //Component
+  msg += level.toUpperCase() + ' | ';                                                       //Log level
+  msg += (logObj.traceID ? logObj.traceID : 'N/A') + ' | ';                                 //Trace ID
+  msg += (logObj.userID ? logObj.userID : 'SYSTEM') + ' | ';                                //User ID
+  msg += (logObj.opType ? logObj.opType : 'DEFAULT') + ' | ';                               //Op Type
+  msg += (logObj.msg ? logObj.msg : '');                                                    //User message
 
-  config = newCfg;
-  createWinston(config);
+
+  try {
+
+    if (obj !== null && obj !== undefined) {
+
+      msg += ' ';
+
+      if (util.isArray(obj)) {
+        if (obj.length > 0) {
+          msg += util.inspect(obj[0], false, config.inspectDepth);
+        }
+        for (var ix = 1; ix < obj.length; ix++) {
+          msg += ', ' + util.inspect(obj[ix], false, config.inspectDepth);
+        }
+
+      }
+      else {
+        msg += util.inspect(obj, false, config.inspectDepth);
+      }
+    }
+
+  } catch (e) {
+    msg += 'Parse Error';
+  }
+
+  return msg;
+
 }
 
 function createWinston(cfg) {
   "use strict";
-  myWinston = new (winston.Logger)({
+
+  //CRITICAL WINSTON
+  //Used when normal winston arises an error.
+  //In addition, it's used for errors with high level (crit, alarm, emerg).
+  criticalWinston = new (winston.Logger)({
+    transports: [
+      new (winston.transports.Console)( { timestamp: true } ),
+      new (winston.transports.File)({ filename: 'criticalLogs.log', json: false, timestamp: true})
+    ]
+  });
+
+  criticalWinston.setLevels(winston.config.syslog.levels);
+
+  //NORMAL WINSTON
+  //Used for normal logging purposes
+
+  /**
+   * This function will be called when an error arises writing a log in a file
+   * @param err The error
+   * @returns {boolean} true (It forces to exit the application -due requirements-)
+   */
+  function exitOnError(err) {
+
+    var logMsg = createLogMessage('emerg', { component: 'logger', msg: 'Error' }, err);
+
+    //Use critical Winston to print the message
+    criticalWinston.emerg(logMsg);
+
+    //Exit (due requirements)
+    return cfg.exitOnError || true;
+  }
+
+  normalWinston = new (winston.Logger)({
     level: cfg.logLevel,
+    exitOnError: exitOnError,
     transports: [
       new (winston.transports.Console)(cfg.Console),
       new (winston.transports.File)(cfg.File)
     ]
   });
 
-  myWinston.setLevels(winston.config.syslog.levels);
+  normalWinston.setLevels(winston.config.syslog.levels);
+
+}
+
+function setConfig(newCfg) {
+  "use strict";
+
+  config = newCfg;
+  config.File.handleExceptions = true;    //Necessary to handle file exceptions
+  createWinston(config);
+
 }
 
 function newLogger() {
   "use strict";
 
-  if (myWinston === null) {
+  if (normalWinston === null) {
     createWinston(config);
   }
 
@@ -89,52 +152,18 @@ function newLogger() {
    * @returns {*}
    */
   logger.log = function (level, logObj, obj) {
-    if (myWinston.levels[level] < myWinston.levels[config.logLevel]) {
+
+    if (normalWinston.levels[level] < normalWinston.levels[config.logLevel]) {
       return;
     }
 
-    try {
+    var message = createLogMessage(level, logObj, obj).replace(/\n/g, '');
 
-      //Compatibility with older versions
-      if (typeof logObj === 'string') {
-        logObj = { msg: logObj };
-      }
-
-      var msg = '';
-
-      //PDI Format
-      msg += timestamp() + ' | ';                                                               //Timestamp
-      msg += os.hostname() + ' | ';                                                             //Machine
-      msg += (logObj.component ? logObj.component : (this.prefix ? this.prefix : '?')) + ' | '; //Component
-      msg += level.toUpperCase() + ' | ';                                                       //Log level
-      msg += (logObj.traceID ? logObj.traceID : 'N/A') + ' | ';                                 //Trace ID
-      msg += (logObj.userID ? logObj.userID : 'SYSTEM') + ' | ';                                //User ID
-      msg += (logObj.opType ? logObj.opType : 'DEFAULT') + ' | ';                               //Op Type
-      msg += (logObj.msg ? logObj.msg : '');                                                    //User message
-
-      if (obj !== null && obj !== undefined) {
-
-        msg += ' ';
-
-        if (util.isArray(obj)) {
-          if (obj.length > 0) {
-            msg += util.inspect(obj[0], false, config.inspectDepth);
-          }
-          for (var ix = 1; ix < obj.length; ix++) {
-            msg += ', ' + util.inspect(obj[ix], false, config.inspectDepth);
-          }
-
-        }
-        else {
-          msg += util.inspect(obj, false, config.inspectDepth);
-        }
-      }
-      return myWinston.log(level, msg.replace(/\n/g, ''));
-      //console.log(prefix + msg);
+    if (normalWinston.levels[level] >= normalWinston.levels['crit']) {
+      criticalWinston.log(level, message)
     }
-    catch (e) {
-      console.log(e);
-    }
+
+    return normalWinston.log(level, message);
   };
 
 

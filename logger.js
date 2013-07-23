@@ -12,6 +12,7 @@
 var util = require('util');
 var common = require('./personalizedCommon.js');
 var winston = require('winston');
+var stackParser = require('stack-parser');
 var os = require('os');
 var logger = null;
 
@@ -108,7 +109,16 @@ function createWinston(cfg) {
    */
   function exitOnError(err) {
 
-    var logMsg = createLogMessage('emerg', { component: 'logger', msg: 'Error' }, err);
+    var component = null;
+
+    try {
+      var items = stackParser.parse(err.stack);
+      component = items[0].file + ':' + items[0].line + ':' + items[0].column;
+    } catch(e) {
+      //Nothing to do...
+    }
+
+    var logMsg = createLogMessage('emerg', { component: component, msg: 'Error' }, err);
 
     //Use critical Winston to print the message
     criticalWinston.emerg(logMsg);

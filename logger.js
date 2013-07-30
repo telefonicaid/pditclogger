@@ -17,8 +17,7 @@ var os = require('os');
 var logger = null;
 
 var hostname = os.hostname();
-var normalWinston = null;
-var criticalWinston = null;
+var winstonLogger = null;
 
 var config = {
   logLevel: 'debug',
@@ -32,47 +31,47 @@ var config = {
   }
 };
 
-function createLogMessage(level, logObj, obj) {
-
-  //Compatibility with older versions
-  if (typeof logObj === 'string') {
-    logObj = { msg: logObj };
-  }
+function createLogMessage(level, message, logObj) {
 
   var msg = '';
 
-  //PDI Format
-  msg += os.hostname() + ' | ';                                                             //Machine
-  msg += (logObj.component ? logObj.component : (this.prefix ? this.prefix : '?')) + ' | '; //Component
-  msg += level.toUpperCase() + ' | ';                                                       //Log level
-  msg += (logObj.traceID ? logObj.traceID : 'N/A') + ' | ';                                 //Trace ID
-  msg += (logObj.userID ? logObj.userID : 'SYSTEM') + ' | ';                                //User ID
-  msg += (logObj.opType ? logObj.opType : 'DEFAULT') + ' | ';                               //Op Type
-  msg += (logObj.msg ? logObj.msg : '');                                                    //User message
+  var COMPONENT = 'component', LEVEL = 'level', CORRELATOR = 'correlator', OP = 'op', TRANSID = 'transid';
 
+  var predefinedValues = [ COMPONENT, LEVEL, CORRELATOR, OP, TRANSID ];
+
+  //PDI Format
+  msg += ' | lv=' + level.toUpperCase();                                                          //Log level
+  msg += ' | op=' + (logObj[OP] ? logObj[OP] : 'DEFAULT');                                        //Op Type
+  msg += ' | msg=' + message;                                                                     //User message
+  msg += ' | correlator=' + (logObj[CORRELATOR] ? logObj[CORRELATOR] : 'N/A');                    //UNICA Correlator
+  msg += ' | transid=' + (logObj[TRANSID] ? logObj[TRANSID] : 'N/A');                             //Transaction ID
+  msg += ' | hostname=' + os.hostname();                                                          //Machine
+  msg += ' | component=' + (logObj[COMPONENT] ? logObj[COMPONENT] : (this.prefix ? this.prefix : '?'));  //Component
 
   try {
 
-    if (obj !== null && obj !== undefined) {
+    if (logObj !== null && logObj !== undefined) {
 
-      msg += ' ';
-
-      if (util.isArray(obj)) {
-        if (obj.length > 0) {
-          msg += util.inspect(obj[0], false, config.inspectDepth);
+      if (util.isArray(logObj)) {
+        msg += ' | Array=';
+        if (logObj.length > 0) {
+          msg += util.inspect(logObj[0], false, config.inspectDepth);
         }
-        for (var ix = 1; ix < obj.length; ix++) {
-          msg += ', ' + util.inspect(obj[ix], false, config.inspectDepth);
+        for (var ix = 1; ix < logObj.length; ix++) {
+          msg += ', ' + util.inspect(logObj[ix], false, config.inspectDepth);
         }
 
-      }
-      else {
-        msg += util.inspect(obj, false, config.inspectDepth);
+      } else {
+        for (var i in logObj) {
+          if (predefinedValues.indexOf(i) === -1) {
+            msg += ' | ' + i + '=' + util.inspect(logObj[i], false, config.inspectDepth);
+          }
+        }
       }
     }
 
   } catch (e) {
-    msg += 'Parse Error';
+    //Nothing to do...
   }
 
   return msg;
@@ -81,26 +80,6 @@ function createLogMessage(level, logObj, obj) {
 
 function createWinston(cfg) {
   "use strict";
-
-  //CRITICAL WINSTON
-  //Used when normal winston arises an error.
-  //In addition, it's used for errors with high level (crit, alarm, emerg).
-  criticalWinston = new (winston.Logger)({
-    transports: [
-      new (winston.transports.Console)( { timestamp: true } ),
-      new (winston.transports.File)({ filename: 'criticalLogs.log', json: false, timestamp: true})
-    ]
-  });
-
-  criticalWinston.setLevels(winston.config.syslog.levels);
-
-  //Necessary because some messages are not flushed correctly
-  criticalWinston.transports.file.once('open', function(e){
-    criticalWinston.transports.file.flush();
-  });
-
-  //NORMAL WINSTON
-  //Used for normal logging purposes
 
   /**
    * This function will be called when an error arises writing a log in a file
@@ -121,13 +100,13 @@ function createWinston(cfg) {
     var logMsg = createLogMessage('emerg', { component: component, msg: 'Error' }, err);
 
     //Use critical Winston to print the message
-    criticalWinston.emerg(logMsg);
+    winstonLogger.emerg(logMsg);
 
     //Exit (due requirements)
     return cfg.exitOnError || true;
   }
 
-  normalWinston = new (winston.Logger)({
+  winstonLogger = new (winston.Logger)({
     level: cfg.logLevel,
     exitOnError: exitOnError,
     transports: [
@@ -136,7 +115,7 @@ function createWinston(cfg) {
     ]
   });
 
-  normalWinston.setLevels(winston.config.syslog.levels);
+  winstonLogger.setLevels(winston.config.syslog.levels);
 
 }
 
@@ -152,7 +131,7 @@ function setConfig(newCfg) {
 function newLogger() {
   "use strict";
 
-  if (normalWinston === null) {
+  if (winstonLogger === null) {
     createWinston(config);
   }
 
@@ -161,20 +140,19 @@ function newLogger() {
   /**
    *
    * @param level Standard default values (DEBUG, INFO, NOTICE, WARNING, ERROR, CRIT, ALERT, EMERG)
-   * @param logObj An object with the following fileds: component, traceID, userID, opType and msg. If any of
-   * those fields are not included, default values will be used.
-   * @param obj An object or an array that will be printed after the message
+   * @param message Log Message
+   * @param logObj An object or an array that will be printed after the message
    * @returns {*}
    */
-  logger.log = function (level, logObj, obj) {
+  logger.log = function (level, message, logObj) {
 
-    if (normalWinston.levels[level] < normalWinston.levels[config.logLevel]) {
+    if (winstonLogger.levels[level] < winstonLogger.levels[config.logLevel]) {
       return;
     }
 
-    var message = createLogMessage.call(this, level, logObj, obj).replace(/\n/g, '');
+    var message = createLogMessage.call(this, level, message, logObj).replace(/\n/g, '');
 
-    return normalWinston.log(level, message);
+    return winstonLogger.log(level, message);
   };
 
 

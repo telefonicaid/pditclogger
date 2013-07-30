@@ -3,104 +3,26 @@
 //
 //
 
-/*
- * Since Winston has a predefined log style define in 'common' module, it's necessary to modify this module
- * in order to accomplish TID Log Style guide. 'personalizedCommon.js' modifies that module and it's necessary
- * to be required even if not used.
- */
-
-var util = require('util');
-var common = require('./personalizedCommon.js');
 var winston = require('winston');
 var stackParser = require('stack-parser');
 var os = require('os');
-var logger = null;
 
 var hostname = os.hostname();
-var normalWinston = null;
-var criticalWinston = null;
+var winstonLogger = null;
 
 var config = {
   logLevel: 'debug',
   inspectDepth: 2,
   Console: {
-    level: 'debug', timestamp: true
+    level: 'debug', timestamp: true, json: true
   },
   File: {
-    //FIXME: Filename should be changed to meet PID requirements
-    level: 'debug', filename: 'pditclogger.log', timestamp: true, json: false
+    level: 'debug', filename: 'UNDEFINED-COMPONENT_' + hostname + '.log', timestamp: true, json: true
   }
 };
 
-function createLogMessage(level, logObj, obj) {
-
-  //Compatibility with older versions
-  if (typeof logObj === 'string') {
-    logObj = { msg: logObj };
-  }
-
-  var msg = '';
-
-  //PDI Format
-  msg += os.hostname() + ' | ';                                                             //Machine
-  msg += (logObj.component ? logObj.component : (this.prefix ? this.prefix : '?')) + ' | '; //Component
-  msg += level.toUpperCase() + ' | ';                                                       //Log level
-  msg += (logObj.traceID ? logObj.traceID : 'N/A') + ' | ';                                 //Trace ID
-  msg += (logObj.userID ? logObj.userID : 'SYSTEM') + ' | ';                                //User ID
-  msg += (logObj.opType ? logObj.opType : 'DEFAULT') + ' | ';                               //Op Type
-  msg += (logObj.msg ? logObj.msg : '');                                                    //User message
-
-
-  try {
-
-    if (obj !== null && obj !== undefined) {
-
-      msg += ' ';
-
-      if (util.isArray(obj)) {
-        if (obj.length > 0) {
-          msg += util.inspect(obj[0], false, config.inspectDepth);
-        }
-        for (var ix = 1; ix < obj.length; ix++) {
-          msg += ', ' + util.inspect(obj[ix], false, config.inspectDepth);
-        }
-
-      }
-      else {
-        msg += util.inspect(obj, false, config.inspectDepth);
-      }
-    }
-
-  } catch (e) {
-    msg += 'Parse Error';
-  }
-
-  return msg;
-
-}
-
 function createWinston(cfg) {
   "use strict";
-
-  //CRITICAL WINSTON
-  //Used when normal winston arises an error.
-  //In addition, it's used for errors with high level (crit, alarm, emerg).
-  criticalWinston = new (winston.Logger)({
-    transports: [
-      new (winston.transports.Console)( { timestamp: true } ),
-      new (winston.transports.File)({ filename: 'criticalLogs.log', json: false, timestamp: true})
-    ]
-  });
-
-  criticalWinston.setLevels(winston.config.syslog.levels);
-
-  //Necessary because some messages are not flushed correctly
-  criticalWinston.transports.file.once('open', function(e){
-    criticalWinston.transports.file.flush();
-  });
-
-  //NORMAL WINSTON
-  //Used for normal logging purposes
 
   /**
    * This function will be called when an error arises writing a log in a file
@@ -118,16 +40,13 @@ function createWinston(cfg) {
       //Nothing to do...
     }
 
-    var logMsg = createLogMessage('emerg', { component: component, msg: 'Error' }, err);
-
-    //Use critical Winston to print the message
-    criticalWinston.emerg(logMsg);
+    winstonLogger.emerg(err.toString(), { component: component });
 
     //Exit (due requirements)
     return cfg.exitOnError || true;
   }
 
-  normalWinston = new (winston.Logger)({
+  winstonLogger = new (winston.Logger)({
     level: cfg.logLevel,
     exitOnError: exitOnError,
     transports: [
@@ -136,7 +55,7 @@ function createWinston(cfg) {
     ]
   });
 
-  normalWinston.setLevels(winston.config.syslog.levels);
+  winstonLogger.setLevels(winston.config.syslog.levels);
 
 }
 
@@ -144,6 +63,7 @@ function setConfig(newCfg) {
   "use strict";
 
   config = newCfg;
+  config.Console.json = true;
   config.File.handleExceptions = true;    //Necessary to handle file exceptions
   createWinston(config);
 
@@ -152,7 +72,7 @@ function setConfig(newCfg) {
 function newLogger() {
   "use strict";
 
-  if (normalWinston === null) {
+  if (winstonLogger === null) {
     createWinston(config);
   }
 
@@ -166,15 +86,16 @@ function newLogger() {
    * @param obj An object or an array that will be printed after the message
    * @returns {*}
    */
-  logger.log = function (level, logObj, obj) {
+  logger.log = function (level, message, logObj) {
 
-    if (normalWinston.levels[level] < normalWinston.levels[config.logLevel]) {
+    if (winstonLogger.levels[level] < winstonLogger.levels[config.logLevel]) {
       return;
     }
 
-    var message = createLogMessage.call(this, level, logObj, obj).replace(/\n/g, '');
+    logObj = logObj || { };
+    logObj.component = logObj ? (logObj.component || this.prefix) : this.prefix;
 
-    return normalWinston.log(level, message);
+    return winstonLogger.log(level, message, logObj);
   };
 
 

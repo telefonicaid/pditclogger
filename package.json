@@ -21,7 +21,6 @@
   "main": "./logger.js",
   "dependencies": {
     "winston": "0.6.2",
-    "cycle": "1.0.x",
     "stack-parser":"0.0.1"
   },
   "license": "AGPL",

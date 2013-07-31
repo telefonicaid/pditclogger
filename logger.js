@@ -36,8 +36,10 @@ function createLogMessage(level, message, logObj) {
   var msg = '';
 
   var COMPONENT = 'component', LEVEL = 'level', CORRELATOR = 'correlator', OP = 'op', TRANSID = 'transid';
-
   var predefinedValues = [ COMPONENT, LEVEL, CORRELATOR, OP, TRANSID ];
+
+  //Set default value
+  logObj = logObj || {};
 
   //PDI Format
   msg += ' | lv=' + level.toUpperCase();                                                          //Log level

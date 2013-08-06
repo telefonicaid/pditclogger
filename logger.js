@@ -45,8 +45,8 @@ function createLogMessage(level, message, logObj) {
   msg += ' | lv=' + level.toUpperCase();                                                          //Log level
   msg += ' | op=' + (logObj[OP] ? logObj[OP] : 'DEFAULT');                                        //Op Type
   msg += ' | msg=' + message;                                                                     //User message
-  msg += ' | correlator=' + (logObj[CORRELATOR] ? logObj[CORRELATOR] : 'N/A');                    //UNICA Correlator
-  msg += ' | transid=' + (logObj[TRANSID] ? logObj[TRANSID] : 'N/A');                             //Transaction ID
+  msg += ' | corr=' + (logObj[CORRELATOR] ? logObj[CORRELATOR] : 'N/A');                    //UNICA Correlator
+  msg += ' | trans=' + (logObj[TRANSID] ? logObj[TRANSID] : 'N/A');                             //Transaction ID
   msg += ' | hostname=' + os.hostname();                                                          //Machine
   msg += ' | component=' + (logObj[COMPONENT] ? logObj[COMPONENT] : (this.prefix ? this.prefix : '?'));  //Component
 

@@ -42,7 +42,7 @@ function createLogMessage(level, message, logObj) {
   logObj = logObj || {};
 
   //PDI Format
-  msg += ' | lv=' + level.toUpperCase();                                                          //Log level
+  msg += ' | lvl=' + level.toUpperCase();                                                          //Log level
   msg += ' | op=' + (logObj[OP] ? logObj[OP] : 'DEFAULT');                                        //Op Type
   msg += ' | msg=' + message;                                                                     //User message
   msg += ' | corr=' + (logObj[CORRELATOR] ? logObj[CORRELATOR] : 'N/A');                    //UNICA Correlator
